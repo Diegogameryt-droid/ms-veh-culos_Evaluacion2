@@ -32,18 +32,25 @@ jobs:
           cache: maven
           cache-dependency-path: ms-vehiculos/pom.xml
 
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
       - name: Install Snyk CLI
         run: npm install -g snyk
 
-      - name: Snyk test Java dependencies
-        run: snyk test --severity-threshold=high
+      - name: Fix mvnw permissions
+        run: if [ -f mvnw ]; then chmod +x mvnw; fi
 
-      - name: Generate Snyk JSON Report
-        if: always()
+      - name: Resolve Maven dependencies
+        run: mvn -B install -DskipTests
+
+      - name: Snyk test Java dependencies
         run: |
-          echo "Generando reporte JSON de Snyk..."
-          snyk test --json > snyk-report.json || echo "Snyk encontró problemas, pero se genera el reporte"
-          ls -lh snyk-report.json || echo "No se generó el reporte"
+          snyk test --severity-threshold=high \
+            --file=pom.xml \
+            --json-file-output=snyk-report.json -d
 
       - name: Upload Snyk JSON Report
         if: always()
@@ -74,7 +81,7 @@ jobs:
           cache-dependency-path: ms-vehiculos/pom.xml
 
       - name: Build and test
-        run: mvn clean verify
+        run: mvn -B clean verify
 
       - name: Upload JaCoCo Report
         if: always()
@@ -111,8 +118,8 @@ jobs:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         run: |
           mvn -B verify org.sonarsource.scanner.maven:sonar-maven-plugin:sonar \
-            -Dsonar.projectKey=TU-ORGANIZACION_TU-REPOSITORIO \
-            -Dsonar.organization=tu-organizacion \
+            -Dsonar.projectKey=Guillermovillacuratorres_devsecops \
+            -Dsonar.organization=guillermovillacuratorres \
             -Dsonar.host.url=https://sonarcloud.io \
             -Dsonar.token=${SONAR_TOKEN}
 
@@ -138,7 +145,7 @@ jobs:
           cache-dependency-path: ms-vehiculos/pom.xml
 
       - name: Package application
-        run: mvn clean package -DskipTests
+        run: mvn -B clean package -DskipTests
 
       - name: Upload JAR artifact
         uses: actions/upload-artifact@v4
